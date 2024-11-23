@@ -34,7 +34,7 @@ const Statistics = () => {
     useEffect(() => {
         const fetchTrips = async () => {
             try {
-                const response = await axios.get(`${BASE_URL}/api/trips/${localStorage.getItem("userRol")}`, {
+                const response = await axios.get(`${BASE_URL}/api/trips/${localStorage.getItem("userRole")}`, {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem("token")}`,
                     },
