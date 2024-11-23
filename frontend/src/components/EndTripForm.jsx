@@ -4,6 +4,7 @@ import axios from "axios";
 import Button from "./Button.jsx";
 
 import { useNavigate } from "react-router-dom";
+import { BASE_URL } from "../config.js";
 
 const EndTripForm = ({ className = "", tripId}) => {
     const [formData, setFormData] = useState({
@@ -19,7 +20,7 @@ const EndTripForm = ({ className = "", tripId}) => {
     useEffect(() => {
         const fetchTripDetails = async () => {
             try {
-                const response = await axios.get(`http://localhost:5000/api/trips/${localStorage.getItem("userRole")}`, {
+                const response = await axios.get(`${BASE_URL}/api/trips/${localStorage.getItem("userRole")}`, {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem("token")}`,
                     },
@@ -72,7 +73,7 @@ const EndTripForm = ({ className = "", tripId}) => {
 
         try {
             const response = await axios.post(
-                `http://localhost:5000/api/trips/${localStorage.getItem("userRole")}/${tripToEnd._id}/end`,
+                `${BASE_URL}/api/trips/${localStorage.getItem("userRole")}/${tripToEnd._id}/end`,
                 {
                     ...formData,
                     endDate,

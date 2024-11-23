@@ -29,7 +29,7 @@ root.render(
   <React.StrictMode>
     <Router>
       <Routes>
-        <Route path="/" element={<SignIn />} />
+        <Route path="/" element={<SignIn/>} />
         <Route path="/redirect" element={<Redirect />} />
         
         {/* Admin Routes */}

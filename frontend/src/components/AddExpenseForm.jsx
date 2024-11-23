@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import axios from "axios"; // Import axios for making API requests
 import Button from "./Button.jsx";
+import { BASE_URL } from "../config.js";
 
 import { useNavigate } from "react-router-dom";
 
@@ -32,7 +33,7 @@ const AddExpenseForm = ({ className = "", incomeId }) => {
         e.preventDefault();
         try {
             // Send data to the backend (replace /api/admin with your actual route)
-            const response = await axios.put(`http://localhost:5000/api/incomes/admin/${incomeId}`, formData, {
+            const response = await axios.put(`${BASE_URL}/api/incomes/admin/${incomeId}`, formData, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
             });
             alert("Expense added successfully!");

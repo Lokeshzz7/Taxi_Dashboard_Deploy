@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import StatHeaders from "./StatHeaders";
 import React, { useEffect, useState } from 'react';
 import axios from "axios";
+import { BASE_URL } from "../config.js";
 
 const Carslist = () => {
     const navigate = useNavigate();
@@ -20,7 +21,7 @@ const Carslist = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/cars/stats' , {
+                const response = await axios.get(`${BASE_URL}/api/cars/stats` , {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`, // Include token in headers
                     },
@@ -40,7 +41,7 @@ const Carslist = () => {
     useEffect(() => {
         const fetchCars = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/cars', {
+                const response = await axios.get(`${BASE_URL}/api/cars`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`, // Include token in headers
                     },
@@ -60,13 +61,13 @@ const Carslist = () => {
         if (!confirmDelete) return;
 
         try {
-            await axios.delete(`http://localhost:5000/api/cars/${id}`, {
+            await axios.delete(`${BASE_URL}/api/cars/${id}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 },
             });
             setCars(cars.filter(car => car._id !== id));
-            const response = await axios.get('http://localhost:5000/api/cars/stats', {
+            const response = await axios.get(`${BASE_URL}/api/cars/stats`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 },

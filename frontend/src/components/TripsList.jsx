@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { BASE_URL } from "../config";
 
 const TripsList = () => {
     const navigate = useNavigate();
@@ -14,7 +15,7 @@ const TripsList = () => {
     useEffect(() => {
         const fetchTrips = async () => {
             try {
-                const response = await axios.get(`http://localhost:5000/api/trips/${localStorage.getItem("userRole")}`, {
+                const response = await axios.get(`${BASE_URL}/api/trips/${localStorage.getItem("userRole")}`, {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem("token")}`, // Include token in headers
                     },

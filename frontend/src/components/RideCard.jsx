@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { BASE_URL } from "../config";
 
 function RideCard({ customerName, driverName, income, carName, tripId }) {
     const navigate = useNavigate();
@@ -12,7 +13,7 @@ function RideCard({ customerName, driverName, income, carName, tripId }) {
     // Function to fetch the total expense based on the income ID
     const fetchTotalExpense = async (incomeId) => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/incomes/admin/total-expense/${incomeId}`, {
+            const response = await axios.get(`${BASE_URL}/api/incomes/admin/total-expense/${incomeId}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem("token")}`,
                 },
@@ -32,7 +33,7 @@ function RideCard({ customerName, driverName, income, carName, tripId }) {
 
     const onAddExpenseClick = async () => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/trips/admin/${tripId}`, {
+            const response = await axios.get(`${BASE_URL}/api/trips/admin/${tripId}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem("token")}`,
                 },
@@ -55,7 +56,7 @@ function RideCard({ customerName, driverName, income, carName, tripId }) {
     const handleDownloadInvoice = async () => {
         try {
             // Call the backend to get the invoice
-            const response = await fetch(`http://localhost:5000/api/incomes/admin/${tripId}`, {
+            const response = await fetch(`${BASE_URL}/api/incomes/admin/${tripId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -96,7 +97,7 @@ function RideCard({ customerName, driverName, income, carName, tripId }) {
     useEffect(() => {
         const fetchTripDetails = async () => {
             try {
-                const response = await axios.get(`http://localhost:5000/api/trips/admin/${tripId}`, {
+                const response = await axios.get(`${BASE_URL}/api/trips/admin/${tripId}`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem("token")}`,
                     },

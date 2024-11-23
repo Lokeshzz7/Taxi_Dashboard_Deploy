@@ -4,7 +4,7 @@ import axios from "axios";
 import React, { useState, useEffect } from 'react';
 import trip from '../data/trip.json';
 import LineChart from "../charts/LineChart.jsx";
-
+import { BASE_URL } from "../config";
 
 const Statistics = () => {
     const [tableData, setTableData] = useState([]);
@@ -15,7 +15,7 @@ const Statistics = () => {
     useEffect(() => {
         const fetchIncomeExpenses = async () => {
             try {
-                const response = await axios.get("http://localhost:5000/api/incomes/admin/total-income-expenses", {
+                const response = await axios.get(`${BASE_URL}/api/incomes/admin/total-income-expenses`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`, // Include token in headers
                     },
@@ -34,7 +34,7 @@ const Statistics = () => {
     useEffect(() => {
         const fetchTrips = async () => {
             try {
-                const response = await axios.get(`http://localhost:5000/api/trips/${localStorage.getItem("userRole")}`, {
+                const response = await axios.get(`${BASE_URL}/api/trips/${localStorage.getItem("userRol")}`, {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem("token")}`,
                     },

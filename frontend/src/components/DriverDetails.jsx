@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
+import { BASE_URL } from "../config.js";
 
 const DriverDetails = () => {
     const { id } = useParams();
@@ -11,7 +12,7 @@ const DriverDetails = () => {
         const fetchDriverDetails = async () => {
             try {
                 const response = await axios.get(
-                    `http://localhost:5000/api/drivers/${id}`,
+                    `${BASE_URL}/api/drivers/${id}`,
                     {
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('token')}`, // Include token in headers

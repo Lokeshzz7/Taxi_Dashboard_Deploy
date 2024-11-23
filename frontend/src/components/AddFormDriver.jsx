@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import Button from "./Button.jsx";
 import { useNavigate } from "react-router-dom";
+import { BASE_URL } from "../config.js";
 
 const AddFormDriver = ({ className = "" }) => {
 
@@ -64,7 +65,7 @@ const AddFormDriver = ({ className = "" }) => {
         }
 
         try {
-            const response = await fetch('http://localhost:5000/api/drivers/add', {
+            const response = await fetch(`${BASE_URL}/api/drivers/add`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

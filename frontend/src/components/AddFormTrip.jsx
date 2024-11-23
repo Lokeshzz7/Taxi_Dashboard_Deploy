@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Button from "./Button.jsx";
 import { useNavigate, useParams } from "react-router-dom";
+import { BASE_URL } from "../config.js";
 
 const AddFormTrip = ({ className = "" }) => {
   const navigate = useNavigate();
@@ -34,12 +35,12 @@ const AddFormTrip = ({ className = "" }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const driversResponse = await axios.get('http://localhost:5000/api/drivers', {
+        const driversResponse = await axios.get(`${BASE_URL}/api/drivers`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`, // Include token in headers
           },
         });
-        const carsResponse = await axios.get('http://localhost:5000/api/cars', {
+        const carsResponse = await axios.get(`${BASE_URL}/api/cars`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`, // Include token in headers
           },
@@ -49,7 +50,7 @@ const AddFormTrip = ({ className = "" }) => {
 
         if (tripId) {
           // Fetch the trip details to pre-fill the form
-          const tripResponse = await axios.get(`http://localhost:5000/api/trips/admin/${tripId}`, {
+          const tripResponse = await axios.get(`${BASE_URL}/api/trips/admin/${tripId}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
           });
 
@@ -97,12 +98,12 @@ const AddFormTrip = ({ className = "" }) => {
     try {
       if (tripId) {
         // If tripId exists, update the trip
-        await axios.put(`http://localhost:5000/api/trips/admin/${tripId}`, formData, {
+        await axios.put(`${BASE_URL}/api/trips/admin/${tripId}`, formData, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         });
       } else {
         // If no tripId, create a new trip
-        await axios.post('http://localhost:5000/api/trips/admin/add', formData, {
+        await axios.post(`${BASE_URL}/api/trips/admin/add`, formData, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         });
       }

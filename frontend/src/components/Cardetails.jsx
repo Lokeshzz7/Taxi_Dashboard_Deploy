@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Button from './Button'; // Ensure this path is correct based on your file structure
+import { BASE_URL } from "../config.js";
 
 const CarDetails = () => {
     const { id } = useParams();
@@ -12,7 +13,7 @@ const CarDetails = () => {
         const fetchCarDetails = async () => {
             try {
                 const response = await axios.get(
-                    `http://localhost:5000/api/cars/${id}`,
+                    `${BASE_URL}/api/cars/${id}`,
                     {
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('token')}`,

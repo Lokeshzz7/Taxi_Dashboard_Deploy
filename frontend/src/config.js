@@ -1,0 +1,1 @@
+export const BASE_URL =  "https://taxi-backend-production.up.railway.app/"

@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import StatHeaders from "./StatHeaders";
 import React, { useEffect, useState } from 'react';
 import axios from "axios";
+import { BASE_URL } from "../config.js";
 
 const Driverslist = () => {
     const navigate = useNavigate();
@@ -20,7 +21,7 @@ const Driverslist = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/drivers/stats', {
+                const response = await axios.get(`${BASE_URL}/api/drivers/stats`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`, // Include token in headers
                     },
@@ -40,7 +41,7 @@ const Driverslist = () => {
     useEffect(() => {
         const fetchDrivers = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/drivers', {
+                const response = await axios.get(`${BASE_URL}/api/drivers`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`, // Include token in headers
                     },
@@ -61,13 +62,13 @@ const Driverslist = () => {
         if (!confirmDelete) return;
 
         try {
-            await axios.delete(`http://localhost:5000/api/drivers/${id}`, {
+            await axios.delete(`${BASE_URL}/api/drivers/${id}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`, // Include token in headers
                 },
             });
             setDrivers(drivers.filter(driver => driver._id !== id));
-            const response = await axios.get('http://localhost:5000/api/drivers/stats', {
+            const response = await axios.get(`${BASE_URL}/api/drivers/stats`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`, // Include token in headers
                 },

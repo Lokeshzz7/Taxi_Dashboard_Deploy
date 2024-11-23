@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import RideCard from './RideCard.jsx';
 import axios from "axios";
+import { BASE_URL } from "../config";
 
 const IncomeList = () => {
     const [trips, setTrips] = useState([]);
@@ -8,7 +9,7 @@ const IncomeList = () => {
     useEffect(() => {
         const fetchTrips = async () => {
             try {
-                const response = await axios.get(`http://localhost:5000/api/trips/${localStorage.getItem("userRole")}`, {
+                const response = await axios.get(`${BASE_URL}/api/trips/${localStorage.getItem("userRole")}`, {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem("token")}`, // Include token in headers
                     },

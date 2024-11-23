@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { BASE_URL } from "../config";
 
 const Signinform = () => {
     const [identifier, setIdentifier] = useState("");
@@ -10,7 +11,7 @@ const Signinform = () => {
         event.preventDefault();
     
         try {
-            const response = await fetch('http://localhost:5000/api/auth/signin', {
+            const response = await fetch(`${BASE_URL}/api/auth/signin`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

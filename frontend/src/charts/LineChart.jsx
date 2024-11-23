@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import * as echarts from 'echarts';
 import axios from 'axios';
+import { BASE_URL } from "../config.js";
 
 const LineChart = () => {
     const [monthlyData, setMonthlyData] = useState([]);
@@ -9,7 +10,7 @@ const LineChart = () => {
         // Fetch data from the backend API
         const fetchData = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/incomes/monthly-summary'); // Update the path if needed
+                const response = await axios.get(`${BASE_URL}/api/incomes/monthly-summary`); // Update the path if needed
                 console.log("API Response Data:", response.data);
                 setMonthlyData(response.data);
             } catch (error) {
