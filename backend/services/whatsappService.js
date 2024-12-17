@@ -2,8 +2,8 @@ const twilio = require('twilio');
 require('dotenv').config();
 
 // Twilio credentials
-const accountSid = 'AC0f03f55aa4953a8c29ee9b743ef99949';
-const authToken =  '6e3db69958f6e3924cc88ac5feedcea5';
+const accountSid = process.env.AUTH_SID;
+const authToken =  process.env.AUTH_TOKEN;
 const client = new twilio(accountSid, authToken);
 
 const sendInvoiceViaWhatsApp = async (customerPhone, filePath) => {
