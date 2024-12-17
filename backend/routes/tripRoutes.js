@@ -6,10 +6,11 @@
     const Car = require("../models/carModel.js")
     const Invoice =  require("../models/invoiceModel.js");
     const Income = require("../models/incomeModel.js");
+    const Customer = require("../models/customerModel.js");
     const { authMiddleware, adminMiddleware, driverMiddleware } = require("../authMiddleware.js");
     const {generateInvoicePDF} = require('../services/invoiceService.js');
     const {sendInvoiceByEmail} = require('../services/gmailService.js');
-    // const {sendInvoiceViaWhatsApp} = require('../services/whatsappService.js');
+    const {sendInvoiceViaWhatsApp} = require('../services/whatsappService.js');
     const app = express();
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({ extended: true }));
@@ -18,15 +19,34 @@
 
     router.get("/admin", authMiddleware, adminMiddleware, async (req, res) => {
         try {
-            const trips = await Trip.find().populate('car driver');
+            const trips = await Trip.find().populate('car driver customer');
             res.status(200).json(trips);
         } catch (error) {
             res.status(500).json({ message: error.message });
         }
     });
-
+    // Admin's request to get pending reviews
+    router.get("/admin/pending", authMiddleware, adminMiddleware, async (req, res) => {
+       
+    
+        try {
+            const pendingTrips = await Trip.where('status').equals('review')
+                .populate('driver')
+                .populate('car')
+                .populate('customer');
+    
+            if (!pendingTrips.length) {
+                return res.status(404).json({ message: "No trips are pending review" });
+            }
+            res.status(200).json({ message: "Trips pending review", trips: pendingTrips });
+        } catch (error) {
+            console.error("Error fetching pending trips:", error);
+            res.status(500).json({ message: "An error occurred while fetching pending trips", error: error.message });
+        }
+    });
+    
     router.post("/admin/add", authMiddleware, adminMiddleware, async (req, res) => { 
-        const { car, driver, startKm, fare, fareType, advance, customerName, customerPhoneNo, customerAadhaarNo, customerAddress,customerEmail,remarks } = req.body; 
+        const { car, driver, startKm, fare, fareType, advance, customerName, customerPhoneNumber, customerAadhaarNumber, customerAddress,customerEmail,startDate } = req.body; 
     
         try {
             // Validate driver availability
@@ -43,25 +63,36 @@
             if (!carData || carData.status !== 'available') {
                 return res.status(400).json({ message: "Car is currently in use or unavailable." });
             }
-    
+
+            let customer = await Customer.findOne({ contactNumber: customerPhoneNumber });
+           
+            if (!customer) {
+                customer = new Customer({
+                    name: customerName,
+                    contactNumber: parseInt(customerPhoneNumber),
+                    AadhaarNo:parseInt(customerAadhaarNumber),
+                    email: customerEmail,
+                    address: customerAddress,
+                    trips: [],
+                    numberOfTrips: 0,
+                });
+                await customer.save();
+            }
+                
+        
             // Create a new trip instance
             const newTrip = new Trip({
                 car,
                 driver,
                 startKm,
                 endKm:  null,  // Use provided endKm or null
-                startDate: new Date(),  // Use current date for startDate
+                startDate: startDate,  // Use current date for startDate
                 endDate: null,           // Initially, endDate is null
                 fare,
                 fareType,                // Include fareType from request body
                 status: 'pending',
-                advance: advance || 0,
-                customerName,
-                customerPhoneNo,
-                customerAadhaarNo,
-                customerAddress,
-                customerEmail,
-                remarks,
+                advance: parseInt(advance) || 0,
+                customer: customer._id,
             });
     
             // Save the new trip
@@ -80,6 +111,11 @@
             carData.currentDriver = driverData._id;
             carData.numberOfTrips = (carData.numberOfTrips || 0) + 1; // Increment numberOfTrips
             await carData.save();
+
+            //Update customer data
+            customer.trips.push(newTrip._id);
+            customer.numberOfTrips += 1;
+            await customer.save();
     
             // Respond with the created trip
             res.status(201).json(newTrip);
@@ -93,7 +129,7 @@
     router.get("/admin/:id",authMiddleware,adminMiddleware, async (req, res) => {
         const { id } = req.params;
         try {
-            const trip = await Trip.findById(id).populate('car driver');
+            const trip = await Trip.findById(id).populate('car driver customer');
 
             if (!trip) {
                 return res.status(404).json({ message: "Trip not found" });
@@ -117,7 +153,7 @@
 
         try {
             // Find the current trip and populate related car and driver information
-            const trip = await Trip.findById(id).populate('car driver');
+            const trip = await Trip.findById(id).populate('car driver customer');
             
             // If trip is not found, return 404 error
             if (!trip) {
@@ -127,7 +163,77 @@
             // Flags to track if car or driver is changed
             let isCarChanged = false;
             let isDriverChanged = false;
+            
+        // Handle customer changes
+        if (updates.customerPhoneNumber && updates.customerPhoneNumber !== trip.customer?.contactNumber) {
+            // Remove the trip reference from the old customer
+            if (trip.customer) {
+                const oldCustomer = await Customer.findById(trip.customer); // Fetch the old customer
+                if (oldCustomer) {
+                    oldCustomer.trips.pull(trip._id);
+                    oldCustomer.numberOfTrips = oldCustomer.trips.length; // Update the number of trips
 
+                    await oldCustomer.save(); // Save the old customer document
+                }
+            }
+        
+            // Check if a customer with the new phone number already exists
+            let newCustomer = await Customer.findOne({ contactNumber: updates.customerPhoneNumber });
+        
+            // If not, create a new customer
+            if (!newCustomer) {
+                const newCustomerData = {
+                    name: updates.customerName || "New Customer", // Default name if not provided
+                    contactNumber: updates.customerPhoneNumber,
+                    AadhaarNo: updates.customerAadhaarNumber || "000000000000", // Default Aadhaar if not provided
+                    email: updates.customerEmail || null,
+                    address: updates.customerAddress || "",
+                    trips: [trip._id],
+                    numberOfTrips: 1,
+                };
+                newCustomer = await Customer.create(newCustomerData);
+            } else {
+                // Ensure the trip is not already in the trips array of the new customer
+                if (!newCustomer.trips.includes(trip._id)) {
+                    newCustomer.trips.push(trip._id); // Add the trip to the new customer
+                }
+                newCustomer.numberOfTrips = newCustomer.trips.length; // Update the number of trips
+                await newCustomer.save(); // Save the new customer document
+            }
+        
+            // Update the trip's customer reference
+            trip.customer = newCustomer._id;
+            await trip.save(); // Save the updated trip
+        }
+        
+        
+        else if ((updates.customerAadhaarNumber  || updates.customerName || updates.customerEmail  ||updates.customerAddress) && trip.customer) {
+            // Create an object to hold the fields that need to be updated
+            const updateFields = {};
+        
+            if (updates.customerName && updates.customerName !== trip.customer.name) {
+                updateFields.name = updates.customerName;
+            }
+            if (updates.customerAadhaarNo && updates.customerAadhaarNo !== trip.customer.AadhaarNo) {
+                updateFields.AadhaarNo = updates.customerAadhaarNo;
+            }
+            if (updates.customerEmail && updates.customerEmail !== trip.customer.email) {
+                updateFields.email = updates.customerEmail;
+            }
+            if (updates.customerAddress && updates.customerAddress !== trip.customer.address) {
+                updateFields.address = updates.customerAddress;
+            }
+        
+            if (Object.keys(updateFields).length > 0) {
+                await Customer.findByIdAndUpdate(
+                    trip.customer,
+                    {
+                        $set: updateFields,
+                    },
+                    { new: true }
+                );
+            }
+        }
             // Case: Both car and driver are being updated
             if ((updates.car && updates.car.toString() !== trip.car.toString()) &&
                 (updates.driver && updates.driver.toString() !== trip.driver.toString())) {
@@ -295,7 +401,15 @@
                 carData.currentDriver = null;
                 await carData.save();
             }
-            
+
+            // Remove trip reference from the customer
+
+            const customerData = await Customer.findById(trip.customer);
+            if (customerData) {
+                customerData.trips.pull(trip._id); 
+                customerData.numberOfTrips = customerData.trips.length;
+                await customerData.save();
+            }
 
             // Delete the trip
             await Trip.findByIdAndDelete(id);
@@ -304,16 +418,15 @@
         } catch (error) {
             res.status(500).json({ message: error.message });
         }
-    });
+    }); 
 
     // Ending a Trip By Admin
     router.post("/admin/:id/end", authMiddleware, adminMiddleware, async (req, res) => {
         const { id } = req.params;
-        const { endKm, endDate, balance , discount , tripExpense } = req.body;
-        console.log(id)
+        const { endKm ,endDate} = req.body;
     
-        if (!endKm || !endDate || balance === undefined) {
-            return res.status(400).json({ message: "Please provide endKm, endDate, and balance." });
+        if (!endKm) {
+            return res.status(400).json({ message: "Please provide endKm" });
         }
     
         try {
@@ -332,74 +445,7 @@
             if (endKm <= trip.startKm) {
                 return res.status(400).json({ message: "EndKm must be greater than startKm." });
             }
-    
-            // Log the balance and trip advance to check their values
-            console.log('Balance:', balance);
-            console.log('Trip Advance:', trip.advance);
-    
-            // Ensure balance and advance are valid numbers
-            const validBalance = parseFloat(balance);
-            const validAdvance = parseFloat(trip.advance);
-            const disc = parseInt(discount);
-            const tripexp = parseFloat(tripExpense);
-           
-            
-            if(isNaN(validBalance)) {
-                return res.status(400).json({ message: "Invalid balance amount." });
-            }
-            if (isNaN(validAdvance)) {
-                return res.status(400).json({ message: "Invalid advance amount." });
-            }
-    
-            // Calculate tripIncome
-            const tripIncome = validBalance + validAdvance;
-            console.log('Calculated Trip Income:', tripIncome);
-    
-            if (isNaN(tripIncome)) {
-                return res.status(400).json({ message: "Invalid trip income." });
-            }
-    
-            // Verify tripIncome is correctly assigned and passed to the Income model
-            const income = new Income({
-                trip: trip._id,
-                car: trip.car,
-                driver : trip.driver,
-                tripIncome: tripIncome, // Correctly pass calculated trip income here
-            });
-            
-            console.log('Income Object:', income);
-    
-            await income.save(); // Save income to database
-    
-            // Create Invoice
-            const invoice = new Invoice({
-                trip: trip._id,
-                car: trip.car,
-                driver: trip.driver,
-                totalKm: endKm - trip.startKm,
-                totalAmount: tripIncome, // Use calculated total amount here
-                remarks: trip.remarks
-            });
-    
-            await invoice.save(); // Save invoice to database
-    
-            // Update trip details
-            if(disc && disc > 0){
-                trip.discount = disc;
-            }
-            if(tripexp && tripexp > 0){
-                trip.tripExpense = tripexp;
-            }
-            trip.endKm = endKm;
-            trip.endDate = endDate;
-            trip.status = 'completed';
-            trip.balance = validBalance;
-            trip.income = income._id; // Set the reference to income
-            trip.invoice = invoice._id; // Set the reference to invoice
-    
-            await trip.save();
-    
-            // Update driver details regardless of who completed the trip
+
             const driverData = await Driver.findById(trip.driver);
             if (driverData) {
                 driverData.currentCar = null;  // Set the current car to null
@@ -414,35 +460,20 @@
             if (carData) {
                 carData.currentDriver = null;  // Set current driver to null
                 carData.status = "available";  // Update car status to available
-                carData.income += tripIncome;
+               
                 await carData.save();
             } else {
                 console.error("Car not found for trip:", trip.car);
             }
-
-
-            try {
-                // After saving the invoice to the database
-                const invo =  {"car":carData.make,"driver" : driverData.name,"customerName" : trip.customerName,"customerEmail" : trip.customerEmail,
-                    "tripId": trip._id,"tripDate": trip.startDate,"tripEndDate": trip.endDate,
-                    "tripAdvance": validAdvance,"tripBalance": validBalance,
-                    "tripIncome": tripIncome,"tripKm": endKm - trip.startKm,
-                    "paymentDate" : Date.now(),"remarks" : trip.remarks, "discount" : trip.discount , "tripExpense": trip.tripExpense
-                }
-                const filePath = await generateInvoicePDF(invo);
-                await sendInvoiceByEmail(trip.customerEmail,filePath);
-                // After generating the invoice, send it via WhatsApp
-                // await sendInvoiceViaWhatsApp(trip.customerPhoneNo, filePath);
-
-        
-                // You can use this filePath later to send via Gmail or WhatsApp
-        
-                res.status(200).json(trip);
-            } catch (error) {
-                console.error('Error ending trip and generating invoice:', error);
-                res.status(500).json({ message: error.message });
-            }
+            
+            
+            trip.endKm = endKm;
+            trip.endDate = endDate; 
+            trip.status = 'review';  
     
+            await trip.save();
+    
+            res.status(200).json({ message: "Trip details submitted for admin review", trip });
     
         } catch (error) {
             console.error("Error ending trip:", error);
@@ -454,7 +485,6 @@
     //Driver's part
 
     router.get("/driver", authMiddleware,driverMiddleware, async (req, res) => {
-        console.log("User Role:", req.user.role); // Log the role here
         try {
             const driver = await Driver.findOne({ user: req.user.userId });
             if (!driver) {
@@ -470,7 +500,7 @@
 
     router.post("/driver/:id/end", authMiddleware, driverMiddleware, async (req, res) => {
         const { id } = req.params;
-        const { endKm, endDate, balance ,discount, tripExpense } = req.body;
+        const { endKm,endDate,tripExpense} = req.body;
 
         try {
             const trip = await Trip.findById(id).populate('driver');
@@ -479,87 +509,21 @@
                 return res.status(404).json({ message: "Trip not found" });
             }
 
-            // Check if the requesting driver is the driver of the trip
+            
             if (trip.driver.user.toString() !== req.user.userId.toString()) {
                 return res.status(403).json({ message: "Access denied" });
             }
 
-            // Check if the trip is still pending
+            
             if (trip.status !== 'pending') {
                 return res.status(400).json({ message: "Trip is already completed or cancelled" });
             }
 
-            // Validate endKm to make sure it's greater than startKm
+            
             if (endKm <= trip.startKm) {
                 return res.status(400).json({ message: "EndKm must be greater than startKm." });
             }
-    
-            // Log the balance and trip advance to check their values
-            console.log('Balance:', balance);
-            console.log('Trip Advance:', trip.advance);
-    
-            // Ensure balance and advance are valid numbers
-            const validBalance = parseFloat(balance);
-            const validAdvance = parseFloat(trip.advance);
-            const disc =  parseInt(discount);
-            const tripexp = parseFloat(tripExpense);
-            
-            if (isNaN(validBalance)) {
-                return res.status(400).json({ message: "Invalid balance amount." });
-            }
-            if (isNaN(validAdvance)) {
-                return res.status(400).json({ message: "Invalid advance amount." });
-            }
-    
-            // Calculate tripIncome
-            const tripIncome = validBalance + validAdvance;
-            console.log('Calculated Trip Income:', tripIncome);
-    
-            if (isNaN(tripIncome)) {
-                return res.status(400).json({ message: "Invalid trip income." });
-            }
-    
-            // Verify tripIncome is correctly assigned and passed to the Income model
-            const income = new Income({
-                trip: trip._id,
-                car: trip.car,
-                driver : trip.driver,
-                tripIncome: tripIncome, // Correctly pass calculated trip income here
-            });
-            
 
-    
-            await income.save(); // Save income to database
-    
-            // Create Invoice
-            const invoice = new Invoice({
-                trip: trip._id,
-                car: trip.car,
-                driver: trip.driver,
-                totalKm: endKm - trip.startKm,
-                totalAmount: tripIncome, // Use calculated total amount here
-                remarks: trip.remarks
-            });
-    
-            await invoice.save(); // Save invoice to database
-    
-            // Update trip details
-            if(disc && disc > 0){
-                trip.discount = disc;
-            }
-            if(tripexp && tripexp > 0){
-                trip.tripExpense = tripexp;
-            }
-            trip.endKm = endKm;
-            trip.endDate = endDate;
-            trip.status = 'completed';
-            trip.balance = validBalance;
-            trip.income = income._id; // Set the reference to income
-            trip.invoice = invoice._id; // Set the reference to invoice
-    
-            await trip.save();
-    
-            // Update driver details regardless of who completed the trip
             const driverData = await Driver.findById(trip.driver);
             if (driverData) {
                 driverData.currentCar = null;  // Set the current car to null
@@ -574,33 +538,19 @@
             if (carData) {
                 carData.currentDriver = null;  // Set current driver to null
                 carData.status = "available";  // Update car status to available
-                carData.income += tripIncome;
                 await carData.save();
             } else {
                 console.error("Car not found for trip:", trip.car);
             }
-            try {
-                // After saving the invoice to the database
-                const invo =  {"car":carData.make,"driver" : driverData.name,"customerName" : trip.customerName,
-                    "tripId": trip._id,"tripDate": trip.startDate,"tripEndDate": trip.endDate,
-                    "tripAdvance": validAdvance,"tripBalance": validBalance,
-                    "tripIncome": tripIncome,"tripKm": endKm - trip.startKm,
-                    "paymentDate" : Date.now(),"remarks" : trip.remarks,
-                    "discount" : trip.discount , "tripExpense": trip.tripExpense
-                }
-                const filePath = await generateInvoicePDF(invo);
-                await sendInvoiceByEmail(trip.customerEmail,filePath);
-
-        
-                // You can use this filePath later to send via Gmail or WhatsApp
-        
-                res.status(200).json(200);
-            } catch (error) {
-                console.error('Error ending trip and generating invoice:', error);
-                res.status(500).json({ message: error.message });
-            }
     
-            res.status(200).json(trip);
+            trip.endKm = endKm;
+            trip.endDate = endDate;
+            trip.tripExpense = tripExpense;
+            trip.status = 'review';  
+    
+            await trip.save();
+    
+            res.status(200).json({ message: "Trip details submitted for admin review", trip });
     
         } catch (error) {
             console.error("Error ending trip:", error);
@@ -608,5 +558,119 @@
         }
     });
 
+
+    //Admin's Finalise API
+    router.get("/admin/pending", authMiddleware, adminMiddleware, async (req, res) => {
+        try {
+            const pendingTrips = await Trip.where('status').equals('review')
+                .populate('driver')
+                .populate('car')
+                .populate('customer');
+    
+            if (!pendingTrips.length) {
+                console.log("No pending trips found.");
+                return res.status(404).json({ message: "No trips are pending review" });
+            }
+            res.status(200).json({ message: "Trips pending review", trips: pendingTrips });
+        } catch (error) {
+            console.error("Error fetching pending trips:", error);
+            res.status(500).json({ message: "An error occurred while fetching pending trips", error: error.message });
+        }
+    });
+    
+    
+
+    router.post("/admin/:id/finalize-trip", authMiddleware, adminMiddleware, async (req, res) => {
+        const { id } = req.params;
+        let { discount, tripExpense, balance } = req.body; 
+    
+        try {
+            const trip = await Trip.findById(id).populate('driver').populate('car').populate('customer');
+            const carData = await Car.findById(trip.car);
+            if (!trip) {
+                return res.status(404).json({ message: "Trip not found" });
+            }
+    
+            // Check if the trip is already completed or cancelled
+            if (trip.status === 'completed' || trip.status === 'cancelled') {
+                return res.status(400).json({ message: "This trip is already completed or canceled" });
+            }
+            
+            discount = parseInt(discount);
+            tripExpense = parseInt(tripExpense);
+            balance = parseInt(balance);
+           
+            if (discount) {
+                trip.discount = discount; 
+            }
+            if (tripExpense) {
+                trip.tripExpense = tripExpense;
+            }
+            if (balance) {
+                trip.balance = balance; 
+            }
+            
+            console.log("Trip balance :" ,balance);
+            
+            const tripIncome = trip.balance + trip.advance;
+            carData.income += tripIncome;
+            await carData.save();
+            const income = new Income({
+                trip: trip._id,
+                car: trip.car,
+                driver: trip.driver,
+                tripIncome: tripIncome
+            });
+            await income.save();
+    
+           
+            // const invoice = new Invoice({
+            //     trip: trip._id,
+            //     car: trip.car,
+            //     driver: trip.driver,
+            //     totalKm: trip.endKm - trip.startKm,
+            //     totalAmount: tripIncome,
+            //     remarks: trip.remarks
+            // });
+            // await invoice.save();
+    
+            // Save income and invoice references to the trip
+            trip.income = income._id;
+            // trip.invoice = invoice._id;
+            trip.status = 'completed';  // Mark trip as completed
+    
+            await trip.save();
+    
+            // Send invoice to the customer (via email, etc.)
+            const invo = {
+                "car": trip.car.make,
+                "driver": trip.driver.name,
+                "customerName": trip.customer.name,
+                "customerEmail": trip.customer.email,
+                "tripId": trip._id,
+                "tripDate": trip.startDate,
+                "tripEndDate": trip.endDate,
+                "tripAdvance": trip.advance,
+                "tripBalance": trip.balance,
+                "tripIncome": tripIncome,
+                "tripKm": trip.endKm - trip.startKm,
+                "paymentDate": Date.now(),
+                "remarks": trip.remarks,
+                "discount": trip.discount,
+                "tripExpense": trip.tripExpense
+            };
+    
+            const filePath = await generateInvoicePDF(invo);
+            await sendInvoiceByEmail(trip.customer.email, filePath);
+            await sendInvoiceViaWhatsApp(trip.customer.contactNumber,`invoices/${trip._id}.pdf`);
+             // Send the generated invoice to the customer
+    
+            res.status(200).json({ message: "Trip finalized, invoice generated, and sent to customer", trip });
+        } catch (error) {
+            console.error("Error finalizing trip:", error);
+            res.status(500).json({ message: error.message });
+        }
+    });
+    
 
     module.exports = router;

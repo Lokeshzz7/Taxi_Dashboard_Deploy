@@ -4,10 +4,12 @@ import axios from "axios";
 import React, { useState, useEffect } from 'react';
 import trip from '../data/trip.json';
 import LineChart from "../charts/LineChart.jsx";
-import { BASE_URL } from "../config";
+import { BASE_URL } from "../Config.js";
+
 
 const Statistics = () => {
     const [tableData, setTableData] = useState([]);
+    const [period, setPeriod] = useState('monthly');
     const [totalIncome, setTotalIncome] = useState(0);
     const [totalExpenses, setTotalExpenses] = useState(0);
     const [trips, setTrips] = useState([]);
@@ -21,6 +23,7 @@ const Statistics = () => {
                     },
                 }); // Adjust the URL if needed
                 const data = response.data;
+                console.log("total income" , data);
                 setTotalIncome(data.totalIncome);
                 setTotalExpenses(data.totalExpenses);
             } catch (error) {
@@ -57,6 +60,10 @@ const Statistics = () => {
         // Set the table data from JSON file
         setTableData(trip);
     }, []);
+
+    const handlePeriodChange = (e) => {
+        setPeriod(e.target.value);
+    };
     return (
 
 
@@ -80,14 +87,16 @@ const Statistics = () => {
                                 alt=""
                                 src="/calendar.svg"
                             />
-                            <div className="relative leading-[20px] font-normal text-[20px] inline-block min-w-[74px] text-white">
-                                Pass 7 Day
+                            <div className="relative leading-[20px] font-normal text-[20px] min-w-[74px] text-white">
+                            <select
+                                value={period}
+                                onChange={handlePeriodChange}
+                                className="bg-darkslateblue text-white font-semibold text-[12px] py-2 px-4 focus:outline-none"
+                            >
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
                             </div>
-                            <img
-                                className="h-6 w-6 relative overflow-hidden shrink-0"
-                                alt=""
-                                src="/chevrondown.svg"
-                            />
                         </div>
                     </div>
 
@@ -112,7 +121,7 @@ const Statistics = () => {
 
 
                 {/* Table */}
-                <LineChart />
+                <LineChart period = {period}/>
             </div>
         </section>
     );

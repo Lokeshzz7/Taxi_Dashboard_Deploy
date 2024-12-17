@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
 
-
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
@@ -11,11 +10,13 @@ const authMiddleware = (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded;
-        console.log('Decoded Token:', decoded); 
-
+        console.log('Decoded Token:', decoded);
         next();
     } catch (error) {
         console.error('Token verification failed:', error);
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Session expired. Please log in again.' });
+        }
         res.status(401).json({ message: 'Token is not valid' });
     }
 };

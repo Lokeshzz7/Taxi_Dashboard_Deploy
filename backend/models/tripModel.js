@@ -10,6 +10,12 @@ const tripSchema = new mongoose.Schema({
         ref: 'Driver',
         required: true
     },
+    customer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Customer',
+        required: true
+    },
+    
     startKm: {  
         type: Number,
         required: true,
@@ -45,7 +51,7 @@ const tripSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'completed', 'cancelled'],
+        enum: ['pending', 'completed', 'cancelled','review'],
         default: 'pending'
     },
     balance: {
@@ -62,33 +68,6 @@ const tripSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     }, 
-    customerName: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    customerPhoneNo: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    customerAadhaarNo: {
-        type: String,
-        required: true,
-        //match: [/^\d{12}$/, 'Please fill a valid Aadhaar number'],  Validates a 12-digit Aadhaar number
-        trim: true
-    },
-    customerEmail: {
-        type: String,
-        required: true,
-        match: [/^\S+@\S+\.\S+$/, 'Please fill a valid email address'], // Validates a standard email format
-        trim: true
-    },
-    customerAddress: {
-        type: String,
-        required: true,
-        trim: true
-    },
     remarks: { 
         type: String,
         trim: true
@@ -98,11 +77,11 @@ const tripSchema = new mongoose.Schema({
         ref: 'Income',
         default: null
     },
-    invoice: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Invoice',
-        default: null
-    }
+    // invoice: {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'Invoice',
+    //     default: null
+    // }
 }, {
     timestamps: true
 });

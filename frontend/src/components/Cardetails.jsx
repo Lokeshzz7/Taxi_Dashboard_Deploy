@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Button from './Button'; // Ensure this path is correct based on your file structure
-import { BASE_URL } from "../config.js";
+import { BASE_URL } from '../Config';
 
 const CarDetails = () => {
     const { id } = useParams();

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import Button from "./Button.jsx";
 import { useNavigate } from "react-router-dom";
-import { BASE_URL } from "../config.js";
+import { BASE_URL } from "../Config.js";
 
 
 const AddFormCar = ({ className = "" }) => {

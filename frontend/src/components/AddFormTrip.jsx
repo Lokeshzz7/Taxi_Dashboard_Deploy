@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Button from "./Button.jsx";
 import { useNavigate, useParams } from "react-router-dom";
-import { BASE_URL } from "../config.js";
+import { BASE_URL } from "../Config.js";
 
 const AddFormTrip = ({ className = "" }) => {
   const navigate = useNavigate();
@@ -22,8 +22,8 @@ const AddFormTrip = ({ className = "" }) => {
     startKm: '',
     endKm: '',
     customerName: '',
-    customerPhoneNo: '',
-    customerAadhaarNo: '',
+    customerPhoneNumber: '',
+    customerAadhaarNumber: '',
     customerEmail: '',
     customerAddress: '',
     remarks: ''
@@ -64,15 +64,17 @@ const AddFormTrip = ({ className = "" }) => {
             advance: tripResponse.data.advance || '',
             fare: tripResponse.data.fare || '',
             notes: tripResponse.data.notes || '',
-            customerName: tripResponse.data.customerName || '',
-            customerPhoneNo: tripResponse.data.customerPhoneNo || '',
-            customerAadhaarNo: tripResponse.data.customerAadhaarNo || '',
+            customerName: tripResponse.data.customer.name || '',
+            customerPhoneNumber: tripResponse.data.customer.contactNumber || '',
+            customerAadhaarNumber: tripResponse.data.customer.AadhaarNo || '',
             fareType: tripResponse.data.fareType || '',
-            customerEmail: tripResponse.data.customerEmail || '',
-            customerAddress: tripResponse.data.customerAddress || '',
+            customerEmail: tripResponse.data.customer.email || '',
+            customerAddress: tripResponse.data.customer.address || '',
             remarks: tripResponse.data.remarks || ''
 
           });
+
+          console.log(tripResponse.data);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -101,6 +103,7 @@ const AddFormTrip = ({ className = "" }) => {
         await axios.put(`${BASE_URL}/api/trips/admin/${tripId}`, formData, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         });
+        console.log("Form DT after submission : ", formData);
       } else {
         // If no tripId, create a new trip
         await axios.post(`${BASE_URL}/api/trips/admin/add`, formData, {
@@ -148,20 +151,20 @@ const AddFormTrip = ({ className = "" }) => {
                       placeholder="Enter the customerName"
                       type="text"
                       value={formData.customerName}
-                      onChange={handleChange}
+                      onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
                     />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-2 flex-1">
-                  <label className="font-medium text-sm">Customer PhoneNo</label>
+                  <label className="font-medium text-sm">Customer PhoneNumber</label>
                   <div className="rounded-2xl flex items-center boz-[1] border-[1px] border-solid border-gray-200 p-4">
                     <input
-                      name="customerPhoneNo"
+                      name="customerPhoneNumber"
                       className="w-full bg-transparent border-none outline-none text-secondary-grey-600 text-left"
                       placeholder="Enter the customerPhoneNo"
                       type="text"
-                      value={formData.customerPhoneNo}
+                      value={formData.customerPhoneNumber}
                       onChange={handleChange}
                     />
                   </div>
@@ -176,11 +179,11 @@ const AddFormTrip = ({ className = "" }) => {
                   <label className="font-medium text-sm">Customer AadhaarNo</label>
                   <div className="rounded-2xl flex items-center boz-[1] border-[1px] border-solid border-gray-200 p-4">
                     <input
-                      name="customerAadhaarNo"
+                      name="customerAadhaarNumber"
                       className="w-full bg-transparent border-none outline-none text-secondary-grey-600 text-left"
-                      placeholder="Enter the customerAadhaarNo"
+                      placeholder="Enter the customerAadhaarNumber"
                       type="text"
-                      value={formData.customerAadhaarNo}
+                      value={formData.customerAadhaarNumber}
                       onChange={handleChange}
                     />
                   </div>

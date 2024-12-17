@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import axios from "axios"; // Import axios for making API requests
 import Button from "./Button.jsx";
-import { BASE_URL } from "../config.js";
 
 import { useNavigate } from "react-router-dom";
+import { BASE_URL } from "../Config.js";
 
 const AddExpenseForm = ({ className = "", incomeId }) => {
     // State for form inputs

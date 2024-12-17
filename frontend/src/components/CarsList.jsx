@@ -2,7 +2,8 @@ import { useNavigate } from "react-router-dom";
 import StatHeaders from "./StatHeaders";
 import React, { useEffect, useState } from 'react';
 import axios from "axios";
-import { BASE_URL } from "../config.js";
+import { BASE_URL } from "../Config";
+import CarStatusToggle from "./CarStatusToggle";
 
 const Carslist = () => {
     const navigate = useNavigate();
@@ -78,6 +79,36 @@ const Carslist = () => {
         }
     };
 
+    const toggleCarStatus = async (id, currentStatus) => {
+        const newStatus = currentStatus === 'in-service' ? 'available' : 'in-service';
+    
+        try {
+            const response = await axios.put(
+                `${BASE_URL}/api/cars/${id}`,
+                { status: newStatus },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    },
+                }
+            );
+    
+            // Update the cars list with the new status
+            setCars(cars.map(car => (car._id === id ? response.data : car)));
+    
+            // Optionally, update the statistics after the status change
+            const statsResponse = await axios.get(`${BASE_URL}/api/cars/stats`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                },
+            });
+            setStats(statsResponse.data);
+        } catch (error) {
+            console.error('Error updating car status:', error);
+        }
+    };
+
+
     const viewCarDetails = (id) => {
         navigate(`/cardetails/${id}`);
     };
@@ -136,8 +167,8 @@ const Carslist = () => {
                                         <th className="px-4 py-2 border-b text-[25px] font-normal mq750:hidden">Car No</th>
                                         {/* <th className="px-4 py-2 border-b text-[25px] font-normal mq750:hidden">Fuel</th>
                                         <th className="px-4 py-2 border-b text-[25px] font-normal mq750:hidden">Price/Day</th> */}
-                                        {/* <th className="px-4 py-2 border-b text-[25px] font-normal mq750:hidden">Transmission</th> */}
                                         <th className="px-4 py-2 border-b text-[25px] font-normal mq750:text-[20px]">Status</th>
+                                        <th className="px-4 py-2 border-b text-[25px] font-normal mq750:hidden">Service</th>
                                         <th className="px-4 py-2 border-b text-[25px] font-normal mq750:text-[20px]">Remove</th>
                                     </tr>
                                 </thead>
@@ -148,17 +179,19 @@ const Carslist = () => {
                                             <td className="px-4 py-2 border-b font-light text-[15px] mq750:hidden ">{car.registrationNumber}</td>
                                             {/* <td className="px-4 py-2 border-b font-light text-[15px] mq750:hidden">{car.fuelType}</td>
                                             <td className="px-4 py-2 border-b font-light text-[15px] mq750:hidden">{car.pricePerDay}</td> */}
-                                            {/* <td className="px-4 py-2 border-b font-light text-[15px] mq750:hidden">{car.model}</td> */}
                                             <td className="px-4 py-2 border-b font-light text-[15px] mq750:px-2 mq750:py-2 mq750:text-[15px]  ">
                                                 <div
                                                     className={`px-2 py-1 font-light text-[15px] rounded w-max text-center ${car.status === 'in-trip' ? 'bg-red-700' :
                                                         car.status === 'available' ? 'bg-green-700' :
-                                                            car.status === 'unavailable' ? 'bg-orange-700' :
-                                                                'bg-gray-500'
-                                                        } text-white`}
-                                                >
+                                                        car.status === 'in-service' ? 'bg-orange-700' :
+                                                        'bg-gray-500'
+                                                    } text-white`}
+                                                    >
                                                     {car.status}
                                                 </div>
+                                                </td>
+                                                <td className="px-4 py-2 border-b font-light text-[15px] mq750:hidden">
+                                                <CarStatusToggle car={car} toggleCarStatus={toggleCarStatus} />
                                             </td>
                                             <td className="px-4 py-2 border-b">
                                                 <button

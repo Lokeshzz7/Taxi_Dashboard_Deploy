@@ -1,23 +1,29 @@
 const twilio = require('twilio');
+require('dotenv').config();
 
 // Twilio credentials
-const accountSid = 'your_account_sid';  // Replace with your Twilio Account SID
-const authToken = 'your_auth_token';    // Replace with your Twilio Auth Token
+const accountSid = 'AC0f03f55aa4953a8c29ee9b743ef99949';
+const authToken =  '6e3db69958f6e3924cc88ac5feedcea5';
 const client = new twilio(accountSid, authToken);
 
 const sendInvoiceViaWhatsApp = async (customerPhone, filePath) => {
     try {
+        const publicUrl = `https://ae6c-115-245-169-114.ngrok-free.app/${filePath}`;
+        console.log('Sending WhatsApp message with mediaUrl:', publicUrl);
+
         const message = await client.messages.create({
             from: 'whatsapp:+14155238886',  // Twilio WhatsApp Sandbox Number
-            to: `whatsapp:${customerPhone}`,  // Customer's WhatsApp number
+            to: `whatsapp:+91${customerPhone}`,  // Customer's WhatsApp number
             body: 'Dear Customer, please find attached your invoice for the completed trip.',
-            mediaUrl: ['https://your-server-url.com/invoices/invoice.pdf'] // URL pointing to the saved invoice PDF
+            mediaUrl: [publicUrl] // Publicly accessible URL
         });
 
-        console.log('WhatsApp message sent: ', message.sid);
+        console.log('WhatsApp message sent:', message.sid);
     } catch (error) {
         console.error('Error sending WhatsApp message:', error);
     }
 };
 
-module.exports = {sendInvoiceViaWhatsApp}
+// sendInvoiceViaWhatsApp('7904505264','invoices/invoice_6752b9510e4a04d984c8de6d.pdf')
+
+module.exports = { sendInvoiceViaWhatsApp };

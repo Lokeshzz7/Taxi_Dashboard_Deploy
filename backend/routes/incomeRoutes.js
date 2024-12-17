@@ -1,62 +1,19 @@
 const express = require("express");
 const router = express.Router();
 const Car = require("../models/carModel.js");
-const Trip = require("../models/tripModel.js");
 const Income = require("../models/incomeModel.js");
 const fs = require("fs");
 const path = require("path");
 const { authMiddleware, adminMiddleware } = require("../authMiddleware.js");
 
-router.put("/admin/:id", authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const id = req.params.id;
-    const updates = req.body;
-    const updatedIncome = await Income.findByIdAndUpdate(
-      id,
-      {
-        $set: {
-          carMaintenance: updates.carMaintenance || 0,
-          driverExpense: updates.driverExpense || 0, // Update driverExpense in Income
-          extraExpense: updates.extraExpense || 0, // Update extraExpense in Income
-        },
-      },
-      { new: true }
-    );
 
-    // 2. If carMaintenance is provided, update the Car model
-    if (updates.carMaintenance) {
-      const income = await Income.findById(id);
-      const carData = await Car.findById(income.car);
 
-      // Add carMaintenance to the car's expenses field
-      carData.expenses += updates.carMaintenance;
-      await carData.save();
-    }
 
-    res.status(200).json(updatedIncome);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+// ============================
+// Aggregation Routes
+// ============================
 
-router.put("/admin/:id/", authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const id = req.params.id;
-    const updates = req.body;
-    if (updates.carMaintenance) {
-      const income = await Income.findById(id);
-      const carData = await Car.findById(income.car);
-      carData.expenses += updates.carMaintenance;
-      await carData.save();
-    }
-    const income = await Income.findByIdAndUpdate(id, updates, { new: true });
-    await income.save();
-    res.status(200).json(income);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
+// Get total income and expenses
 router.get(
   "/admin/total-income-expenses",
   authMiddleware,
@@ -81,8 +38,6 @@ router.get(
         },
       ]);
 
-      console.log("Aggregation result: ", incomes);
-
       if (incomes.length > 0) {
         const { totalIncome, totalExpenses } = incomes[0];
         return res.status(200).json({ totalIncome, totalExpenses });
@@ -90,86 +45,21 @@ router.get(
         return res.status(200).json({ totalIncome: 0, totalExpenses: 0 });
       }
     } catch (error) {
-      console.error("Error fetching total income and expenses:", error);
       return res.status(500).json({ message: "Server error" });
     }
   }
 );
 
-const mongoose = require("mongoose");
-const { ObjectId } = mongoose.Types;
-
-router.get(
-  "/admin/total-expense/:incomeId",
+// Get monthly income and expenses summary
+router.get("/admin/monthly-summary/",
   authMiddleware,
   adminMiddleware,
-  async (req, res) => {
-    const { incomeId } = req.params; // Get incomeId from the route parameters
-
-    try {
-      // Log the income ID
-      console.log("Income ID:", incomeId);
-
-      // Fetch the income data including expenses for the specific income ID
-      const incomeData = await Income.findById(incomeId);
-
-      // Log the income data to see the expenses
-      console.log("Income Data:", incomeData);
-
-      // If incomeData is not found, handle this case
-      if (!incomeData) {
-        return res.status(404).json({ message: "Income not found" });
-      }
-
-      // Aggregate expenses for the specific income ID
-      const aggregatedExpenses = await Income.aggregate([
-        {
-          $match: {
-            _id: new ObjectId(incomeId), // Ensure incomeId is converted to ObjectId
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            totalExpenses: {
-              $sum: {
-                $add: [
-                  { $ifNull: ["$carMaintenance", 0] },
-                  { $ifNull: ["$driverExpense", 0] },
-                  { $ifNull: ["$extraExpense", 0] },
-                ],
-              },
-            },
-          },
-        },
-      ]);
-
-      // Log the aggregation result
-      console.log("Aggregation Result: ", aggregatedExpenses);
-
-      if (aggregatedExpenses.length > 0) {
-        return res
-          .status(200)
-          .json({ totalExpense: aggregatedExpenses[0].totalExpenses });
-      } else {
-        return res.status(200).json({ totalExpense: 0 });
-      }
-    } catch (error) {
-      console.error("Error fetching total expense:", error);
-      return res.status(500).json({ message: "Server error" });
-    }
-  }
-);
-
-// Route to get monthly income and expenses summary
-router.get("/monthly-summary", async (req, res) => {
+   async (req, res) => {
   try {
     const currentDate = new Date();
 
-    // Aggregation pipeline to calculate monthly totals
     const monthlyData = await Income.aggregate([
       {
-        // Group by year and month to get monthly totals
         $group: {
           _id: {
             year: { $year: "$createdAt" },
@@ -182,7 +72,6 @@ router.get("/monthly-summary", async (req, res) => {
         },
       },
       {
-        // Add calculated fields for totalExpense, grossProfit, and netProfit
         $addFields: {
           totalExpense: {
             $add: [
@@ -207,18 +96,10 @@ router.get("/monthly-summary", async (req, res) => {
         },
       },
       {
-        // Sort by year and month in ascending order
         $sort: { "_id.year": 1, "_id.month": 1 },
       },
     ]);
 
-    // Log all monthly data for debugging
-    console.log(
-      "Monthly Data Before Response:",
-      JSON.stringify(monthlyData, null, 2)
-    );
-
-    // Adjust for current partial month if applicable
     monthlyData.forEach((item) => {
       const isCurrentMonth =
         item._id.year === currentDate.getFullYear() &&
@@ -228,48 +109,192 @@ router.get("/monthly-summary", async (req, res) => {
       }
     });
 
-    // Respond with monthly data
     res.json(monthlyData);
   } catch (error) {
-    console.error("Error in fetching monthly summary:", error);
-    res
-      .status(500)
-      .json({ error: "An error occurred while fetching the monthly summary." });
+    res.status(500).json({
+      error: "An error occurred while fetching the monthly summary.",
+    });
   }
 });
 
-module.exports = router;
+router.get(
+  "/admin/weekly-summary",
+  authMiddleware,
+  adminMiddleware,
+  async (req, res) => {
+    try {
+      const currentDate = new Date();
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(currentDate.getDate() - 7);
 
+      const weeklyData = await Income.aggregate([
+        {
+          // Match only documents created in the last 7 days
+          $match: {
+            createdAt: { $gte: sevenDaysAgo, $lte: currentDate },
+          },
+        },
+        {
+          // Group by day (year, month, day)
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+              day: { $dayOfMonth: "$createdAt" },
+            },
+            totalIncome: { $sum: "$tripIncome" },
+            totalDriverExpense: { $sum: "$driverExpense" },
+            totalCarMaintenance: { $sum: "$carMaintenance" },
+            totalExtraExpense: { $sum: "$extraExpense" },
+          },
+        },
+        {
+          // Add calculated fields
+          $addFields: {
+            totalExpense: {
+              $add: [
+                "$totalDriverExpense",
+                "$totalCarMaintenance",
+                "$totalExtraExpense",
+              ],
+            },
+            grossProfit: "$totalIncome",
+            netProfit: {
+              $subtract: [
+                "$totalIncome",
+                {
+                  $add: [
+                    "$totalDriverExpense",
+                    "$totalCarMaintenance",
+                    "$totalExtraExpense",
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        {
+          // Sort by year, month, and day in ascending order
+          $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 },
+        },
+      ]);
+
+      // Respond with the weekly data
+      res.json(weeklyData);
+    } catch (error) {
+      console.error("Error fetching weekly summary:", error);
+      res.status(500).json({
+        error: "An error occurred while fetching the weekly summary.",
+      });
+    }
+  }
+);
+// Get total expense for a specific Income ID
+router.get(
+  "/admin/total-expense/:incomeId",
+  authMiddleware,
+  adminMiddleware,
+  async (req, res) => {
+    const { incomeId } = req.params;
+
+    try {
+      const aggregatedExpenses = await Income.aggregate([
+        {
+          $match: {
+            _id: new mongoose.Types.ObjectId(incomeId),
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalExpenses: {
+              $sum: {
+                $add: [
+                  { $ifNull: ["$carMaintenance", 0] },
+                  { $ifNull: ["$driverExpense", 0] },
+                  { $ifNull: ["$extraExpense", 0] },
+                ],
+              },
+            },
+          },
+        },
+      ]);
+
+      if (aggregatedExpenses.length > 0) {
+        return res
+          .status(200)
+          .json({ totalExpense: aggregatedExpenses[0].totalExpenses });
+      } else {
+        return res.status(200).json({ totalExpense: 0 });
+      }
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+// ============================
+// Update Routes
+// ============================
+
+// Update Income and related Car expenses
+router.put("/admin/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const updates = req.body;
+
+    // Update income fields
+    const updatedIncome = await Income.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          carMaintenance: updates.carMaintenance || 0,
+          driverExpense: updates.driverExpense || 0,
+          extraExpense: updates.extraExpense || 0,
+        },
+      },
+      { new: true }
+    );
+
+    // Update Car expenses if carMaintenance is provided
+    if (updates.carMaintenance) {
+      const income = await Income.findById(id);
+      const carData = await Car.findById(income.car);
+      carData.expenses += updates.carMaintenance;
+      await carData.save();
+    }
+
+    res.status(200).json(updatedIncome);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ============================
+// Get Routes (Details)
+// ============================
+
+// // Get an invoice for a trip by ID
 router.get("/admin/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  console.log("Trip Id : ",req.params.id);
   try {
     const tripId = req.params.id;
-    // Define the file path for the invoice PDF
     const filePath = path.join(__dirname, `../invoices/invoice_${tripId}.pdf`);
 
-    // Log the file path for debugging
-    console.log(`Checking for file at: ${filePath}`);
-
-    // Check if the file exists
     if (fs.existsSync(filePath)) {
-      console.log(`File found: ${filePath}`);
-
-      // Set headers for file download
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
         `attachment; filename="invoice_${tripId}.pdf"`
       );
-
-      // Serve the PDF file
       return res.sendFile(filePath);
     } else {
-      console.error(`File not found for trip ID: ${tripId}`);
       return res.status(404).json({ message: "Invoice not found" });
     }
   } catch (error) {
-    console.error("Error fetching invoice:", error);
-    return res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
 });
+
 
 module.exports = router;

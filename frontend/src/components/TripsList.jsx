@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { BASE_URL } from "../config";
+import { BASE_URL } from "../Config";
 
 const TripsList = () => {
     const navigate = useNavigate();
 
     const onAddTripClick = () => {
         navigate("/addtrip"); // Navigate to add trip form
+    };
+
+    const onReviewTripClick = (tripId) => {
+        navigate(`/reviewtrip`); 
     };
 
     const [trips, setTrips] = useState([]);
@@ -53,6 +57,12 @@ const TripsList = () => {
                                 >
                                     Add Trip
                                 </button>
+                                <button
+                                    className="bg-[#5932EA] text-white font-bold text-[20px] md:text-[20px] px-2 py-1 rounded-lg w-full md:w-[190px] h-[40px] mix-blend-normal  mq750:text-[15px] cursor-pointer"
+                                    onClick={onReviewTripClick}
+                                >
+                                    Review Trip
+                                </button>
                             </div>
                         </div>
 
@@ -78,9 +88,7 @@ const TripsList = () => {
                                             <th className="px-4 py-2 border-b text-[25px] font-normal mq750:text-[20px]  mq750:px-2">
                                                 Driver
                                             </th>
-                                            <th className="px-4 py-2 border-b text-[25px] font-normal mq1224:hidden">
-                                                Car
-                                            </th>
+                                            
                                             <th className="px-4 py-2 border-b text-[25px] font-normal mq1224:hidden">
                                                 Start Date
                                             </th>
@@ -108,9 +116,7 @@ const TripsList = () => {
                                                 <td className="px-4 py-2 border-b font-light text-[15px] mq750:text-[15px]  mq750:px-2 ">
                                                     {trip.driver.name}
                                                 </td>
-                                                <td className="px-4 py-2 border-b font-light text-[15px] mq1224:hidden ">
-                                                    {trip.car.make}
-                                                </td>
+                                                
                                                 <td className="px-4 py-2 border-b font-light text-[15px] mq1224:hidden ">
                                                     {new Date(trip.startDate).toLocaleDateString()}
                                                 </td>
@@ -119,18 +125,16 @@ const TripsList = () => {
                                                 </td>
                                                 <td className="px-4 py-2 border-b">
                                                     <div
-                                                        className={`px-2 py-1 rounded w-max font-light text-[15px] text-center mq750:text-[15px]  mq750:px-2 ${trip.status === "pending"
-                                                            ? "bg-red-700"
-                                                            : trip.status === "completed"
-                                                                ? "bg-green-700"
-                                                                : "bg-gray-500"
-                                                            } text-white`}
+                                                        className={`px-2 py-1 rounded w-max font-light text-[15px] text-center mq750:text-[15px]  mq750:px-2 ${trip.status === "pending" ? "bg-red-700" 
+                                                            : trip.status === "completed" ? "bg-green-700" 
+                                                            : trip.status === "review" ? "bg-gray-500" 
+                                                            : "bg-gray-300"} text-white`}
                                                     >
                                                         {trip.status}
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-2 border-b font-light text-[15px] ">
-                                                    {trip.status !== "completed" && (
+                                                    {trip.status !== "completed" && trip.status !== "review" &&(
                                                         <button
                                                             className="bg-blue-700 text-white font-light text-[15px] px-4 py-2 rounded mq1224:hidden cursor-pointer"
                                                             onClick={() => onUpdateTripClick(trip._id)}
@@ -141,7 +145,7 @@ const TripsList = () => {
                                                 </td>
 
                                                 <td className="px-4 py-2 border-b">
-                                                    {trip.status !== "completed" && (
+                                                    {trip.status !== "completed" && trip.status !== "review" &&(
                                                         <button
                                                             className="bg-red-700 text-white font-light text-[15px] px-4 py-2 rounded mq750:text-[15px]  mq750:px-2 cursor-pointer"
                                                             onClick={() => onEndTripClick(trip._id)}

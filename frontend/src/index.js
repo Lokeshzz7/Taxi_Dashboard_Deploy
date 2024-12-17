@@ -22,6 +22,9 @@ import CarDetails from './components/Cardetails.jsx';
 import Redirect from './Redirect.jsx';  // Import Redirect component
 import ProtectedRoute from './ProtectedRoute.jsx';  // Import ProtectedRoute component
 import EndTrip from './EndTrip.jsx';
+import Review from './Review.jsx';
+import ReviewTripForm from './components/ReviewTripForm.jsx';
+import ReviewTrip from './ReviewForm.jsx';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -29,7 +32,7 @@ root.render(
   <React.StrictMode>
     <Router>
       <Routes>
-        <Route path="/" element={<SignIn/>} />
+        <Route path="/" element={<SignIn />} />
         <Route path="/redirect" element={<Redirect />} />
         
         {/* Admin Routes */}
@@ -39,6 +42,10 @@ root.render(
         
         {/* Updated Route for Adding Trips */}
         <Route path="/addtrip" element={<ProtectedRoute element={<AddTrip />} allowedRoles={['admin']} />} />
+
+        <Route path="/reviewtrip" element={<ProtectedRoute element={<Review/>} allowedRoles={['admin']} />} />
+
+        <Route path="/finalizetrip/:tripId" element={<ProtectedRoute element={<ReviewTrip/>} allowedRoles={['admin']} />} />
 
         <Route path="/endtrip/:tripId" element={<ProtectedRoute element={<EndTrip />} allowedRoles={['admin','driver']} />} />
         

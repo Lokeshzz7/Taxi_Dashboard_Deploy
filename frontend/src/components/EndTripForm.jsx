@@ -1,26 +1,25 @@
-import React, {useEffect,useState } from "react";
+import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
 import Button from "./Button.jsx";
 
 import { useNavigate } from "react-router-dom";
-import { BASE_URL } from "../config.js";
+import { BASE_URL } from "../Config.js";
 
-const EndTripForm = ({ className = "", tripId}) => {
+const EndTripForm = ({ className = "", tripId }) => {
     const [formData, setFormData] = useState({
         endKm: 0,
-        discount:0,
-        tripExpense: 0,
     });
 
     const [tripDetails, setTripDetails] = useState(null);
+    const [userRole, setUserRole] = useState(localStorage.getItem("userRole")); // Retrieve user role from localStorage
 
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchTripDetails = async () => {
             try {
-                const response = await axios.get(`${BASE_URL}/api/trips/${localStorage.getItem("userRole")}`, {
+                const response = await axios.get(`${BASE_URL}/api/trips/${userRole}`, {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem("token")}`,
                     },
@@ -32,25 +31,23 @@ const EndTripForm = ({ className = "", tripId}) => {
         };
 
         fetchTripDetails();
-    }, [tripId]);
+    }, [tripId, userRole]);
 
     const handleBack = () => {
         navigate(-1); // Navigates to the previous page
     };
 
-    // Handle change in input fields
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData({
             ...formData,
-            [name]: parseFloat(value) || 0
+            [name]: parseFloat(value) || 0,
         });
     };
 
-    // Handle form submission
     const handleSubmit = async (e) => {
         const tripToEnd = tripDetails.find((trip) => trip._id === tripId);
-        e.preventDefault(); 
+        e.preventDefault();
         const endDate = new Date();
 
         if (!tripDetails) {
@@ -58,26 +55,12 @@ const EndTripForm = ({ className = "", tripId}) => {
             return;
         }
 
-        const farePrice = tripToEnd.fare; 
-        const advanceAmount = tripToEnd.advance;
-        let balance = 0;
-
-        if (tripToEnd.fareType === "day") {
-            const daysDifference = Math.ceil(
-                (endDate - new Date(tripToEnd.startDate)) / (1000 * 60 * 60 * 24)
-            );
-            balance = farePrice * daysDifference - advanceAmount - formData.discount;
-        } else if (tripToEnd.fareType === "km") {
-            balance = farePrice * (formData.endKm - tripToEnd.startKm) - advanceAmount - formData.discount;
-        }
-
         try {
             const response = await axios.post(
-                `${BASE_URL}/api/trips/${localStorage.getItem("userRole")}/${tripToEnd._id}/end`,
+                `${BASE_URL}/api/trips/${userRole}/${tripToEnd._id}/end`,
                 {
                     ...formData,
                     endDate,
-                    balance,
                 },
                 {
                     headers: {
@@ -86,7 +69,9 @@ const EndTripForm = ({ className = "", tripId}) => {
                 }
             );
 
-            if (response.status === 200) {
+            if (response.status === 200 && userRole === 'admin') {
+                navigate("/reviewtrip");
+            }else if(response.status === 200 && userRole === 'driver'){
                 navigate("/trips");
             }
         } catch (error) {
@@ -118,41 +103,13 @@ const EndTripForm = ({ className = "", tripId}) => {
                                         value={formData.endKm}
                                         onChange={handleChange}
                                         className="w-full bg-transparent border-none outline-none text-secondary-grey-600 text-left"
-                                        placeholder="Enter Car Maintenance"
+                                        placeholder="Enter End Km"
                                         type="number"
                                     />
                                 </div>
                             </div>
 
-                            {/* Trip Expense */}
-                            <div className="flex flex-col gap-2">
-                                <label className="font-medium text-sm">Trip Expense</label>
-                                <div className="rounded-2xl flex items-center border-[1px] border-solid border-gray-200 p-4">
-                                    <input
-                                        name="tripExpense"
-                                        value={formData.tripExpense}
-                                        onChange={handleChange}
-                                        className="w-full bg-transparent border-none outline-none text-secondary-grey-600 text-left"
-                                        placeholder="Enter Driver Expense"
-                                        type="number"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Discount */}
-                            <div className="flex flex-col gap-2">
-                                <label className="font-medium text-sm">Discount</label>
-                                <div className="rounded-2xl flex items-center border-[1px] border-solid border-gray-200 p-4">
-                                    <input
-                                        name="discount"
-                                        value={formData.discount}
-                                        onChange={handleChange}
-                                        className="w-full bg-transparent border-none outline-none text-secondary-grey-600 text-left"
-                                        placeholder="Enter Extra Expenses"
-                                        type="number"
-                                    />
-                                </div>
-                            </div>
+                            {/* Conditionally render Trip Expense and Discount fields */}
 
                             {/* Submit Button */}
                             <div className="flex flex-col items-center mt-4">
@@ -170,6 +127,7 @@ const EndTripForm = ({ className = "", tripId}) => {
         </div>
     );
 };
+
 
 EndTripForm.propTypes = {
     className: PropTypes.string,
